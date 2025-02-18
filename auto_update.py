@@ -1,4 +1,4 @@
-stock_list = ['CHWY', 'IDXX', 'LMND', 'PAWZ', 'GLD', 'TDOC', 'AMD', 'BABA', 'GEV', 'VST', 'ENR', 'LKNCY', 'ASML', 'NQmain', 'ORCL', 'TSM', 'BRK.B', 'GOOG', 'INDA', 'ISRG', 'AMZN', 'META', 'AAPL', 'OKLO', 'V', 'MRVL', 'AXON', 'MSTR', 'MS', 'GS', 'BAC', 'JPM', 'NUE', '06181', '09992', '03042', '4901', '6758', '7453', '7974', '8136']
+
 
 from finance_calendars import finance_calendars as fc
 from datetime import datetime, timedelta
@@ -11,6 +11,22 @@ import asyncio
 from dida365 import Dida365Client, ServiceType, TaskCreate, ProjectCreate, TaskPriority, TaskUpdate
 
 load_dotenv()
+
+from futu import *
+quote_ctx = OpenQuoteContext(host='127.0.0.1', port=11111)
+
+ret, data = quote_ctx.get_user_security("focus")
+if ret == RET_OK:
+    print(data)
+    if data.shape[0] > 0:  # If the user security list is not empty
+        print(data['code'][0]) # Take the first stock code
+        print(data['code'].values.tolist()) # Convert to list
+else:
+    print('error:', data)
+quote_ctx.close() # After using the connection, remember to close it to prevent the number of connections from running out
+
+stock_list = data.code.values.tolist()
+stock_list = [a.split('.')[1] for a in stock_list]
 
 # client_id = os.getenv('CLIENT_ID')
 # client_secret = os.getenv('CLIENT_SECRET')
