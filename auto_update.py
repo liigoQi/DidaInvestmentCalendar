@@ -10,23 +10,13 @@ import os
 import asyncio
 from dida365 import Dida365Client, ServiceType, TaskCreate, ProjectCreate, TaskPriority, TaskUpdate
 
-load_dotenv()
+import schedule
+import time
 
 from futu import *
-quote_ctx = OpenQuoteContext(host='127.0.0.1', port=11111)
 
-ret, data = quote_ctx.get_user_security("focus")
-if ret == RET_OK:
-    print(data)
-    if data.shape[0] > 0:  # If the user security list is not empty
-        print(data['code'][0]) # Take the first stock code
-        print(data['code'].values.tolist()) # Convert to list
-else:
-    print('error:', data)
-quote_ctx.close() # After using the connection, remember to close it to prevent the number of connections from running out
+load_dotenv()
 
-stock_list = data.code.values.tolist()
-stock_list = [a.split('.')[1] for a in stock_list]
 
 # client_id = os.getenv('CLIENT_ID')
 # client_secret = os.getenv('CLIENT_SECRET')
@@ -42,7 +32,7 @@ def get_next_n(n):
     return next_n_days  
 
 async def main():
-    # Initialize client (credentials can also be loaded from .env file)
+    print('Start:', datetime.now())
     client = Dida365Client(
         service_type=ServiceType.DIDA365,  # or DIDA365
         redirect_uri="http://localhost:8080/callback",  # Optional
@@ -54,12 +44,26 @@ async def main():
         # and open your browser for authorization
         await client.authenticate()
         # Token will be automatically saved to .env if save_to_env=True
+        
+    quote_ctx = OpenQuoteContext(host='127.0.0.1', port=11111)
+    ret, data = quote_ctx.get_user_security("focus")
+    if ret == RET_OK:
+        print(data)
+        if data.shape[0] > 0:  # If the user security list is not empty
+            print(data['code'][0]) # Take the first stock code
+            print(data['code'].values.tolist()) # Convert to list
+    else:
+        print('error:', data)
+    quote_ctx.close() # After using the connection, remember to close it to prevent the number of connections from running out
 
+    stock_list = data.code.values.tolist()
+    stock_list = [a.split('.')[1] for a in stock_list]
+    
     # 获取已有任务
     now_tasks = await client.get_project_with_data(project_id=invest_project_id)    
     now_tasks = [task.title for task in now_tasks.tasks]        
     
-    dates = get_next_n(30)
+    dates = get_next_n(7)
     
     # 宏观事件
     for date in dates:
@@ -148,8 +152,15 @@ async def main():
                             title=name,
                         )
                     )
-            
-            
-
+    print('End:', datetime.now())
+    
 if __name__ == "__main__":
-    asyncio.run(main())
+    def job():
+        asyncio.run(main()) 
+    
+    # 每周日的某个时间运行
+    schedule.every().sunday.at("00:00").do(job)
+
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
